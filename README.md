@@ -120,7 +120,7 @@ Tree         :
 
 </pre>
 
-In short, we must search the cross-product of all possible files. The worst-case number of combinations can be calculated using n^m, where n is the number of potential files in a file, and m is the number of files in the piece. We obviously can't effect m, but we can do a few things to reduce m. I haven't seen any similar tool use these optimizations before, and this is why I built this tool in the first place.
+In short, we must search the cross-product of all possible files. The worst-case number of combinations can be calculated using n^m, where n is the number of potential files in a file, and m is the number of files in the piece. We obviously can't effect m, but we can do a few things to reduce n. I haven't seen any similar tool use these optimizations before, and this is why I built this tool in the first place.
 
 For example:
 <pre>
