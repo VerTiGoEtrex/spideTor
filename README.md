@@ -59,6 +59,7 @@ Possible improvements (TODO)
 ============================
 - Multiprocessing in batch mode
 - Run the DFS search with SHA1 on a GPU if available (I'd probably need to write this as an extension in C++)
+- Look into Cython to compile as C
 - Automated unit testing
 - Better combination calculation function (I think this would be better modeled as a graph coloring problem)
 - Partial structure creation when we can't match a file
