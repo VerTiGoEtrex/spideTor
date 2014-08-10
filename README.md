@@ -61,5 +61,6 @@ Possible improvements (TODO)
 - Run the DFS search with SHA1 on a GPU if available (I'd probably need to write this as an extension in C++)
 - Automated unit testing
 - Better combination calculation function (I think this would be better modeled as a graph coloring problem)
+- Partial structure creation when we can't match a file
 
 I fix things as I need to. At some point, I might have enough files where Python becomes too slow. Until then though, spideTor will remain a strictly Python-only project.
