@@ -25,11 +25,12 @@ Features
 
 Supported platforms: Windows Vista and above, and Linux (although Linux remains largely untested)
 
-* Unicode support
+* Unicode support -- This was my first foray into internationalization and may have bugs, but it seems to be very stable.
 * Robust mode (verify all pieces) and Quick mode (verify one full piece of a file, at most)
 * Network filesystem support under Windows and Linux
 * Supports UNC paths (paths over 260 characters on Windows)
-* Batch processing mode -- TODO: Add multiprocessor support to batch mode!!
+* Batch processing mode
+* Super fast -- Fastest processing of cross-product pieces that I've been able to find
 
 Challenges
 ==========
@@ -53,7 +54,101 @@ The nature of this project is a challenge in itself. In essence, we're bruteforc
 
 Implementation details
 ======================
-TODO
+spideTor is split into stages of execution.
+
+Stage 1 -- Read metafiles
+-------------------------
+This stage is very simple. I use the bencode libary to decode the binary-encoded metafiles, and then wrap them into their own objects.
+
+Stage 2 -- Fill the directory cache
+-----------------------------------
+This is the magic that makes this whole project feasible. It obviously doesn't make any sense to match metafile files to filesystem files if they're not the same size, so I created a DirectoryCache class which os.walk(s) your source directory to map a file size to files that are that size.
+
+Stage 3 -- Match the files and create symlinks
+---------------------------------------------
+In summary, this stage is a semi-intelligent brute-force.
+
+To begin, I create a mapping from metafileFile to a set of potential matches on your filesystem. These potential matches are found using the DirectoryCache created in stage 2. The ultimate goal is to reduce the size of all of the sets to 1. This step is O(n) time.
+
+Next, we can begin eliminating files from the potential matches set by verifying pieces of the file against their piece hash. This is performed in 2 steps.
+
+Step 1: Resolve all 1-file pieces.
+<pre>
+Piece: -----XXXX-----
+File : -----XXXX-----
+OR
+Piece: -----XXXX-----
+File : ---XXXXXXXX---
+</pre>
+These pieces give us the most information, and are always the easiest to resolve. Since there is only one metafileFile in the piece, brute forcing this piece takes O(n) time, where n is the number of potential matches for the metafileFile in this piece. 
+
+When operating in quick mode, resolving these pieces could potentially make a file skippable. For example:
+<pre>
+Pieces: ----WWWWXXXXYYYYZZZZ----
+Files : AAAAAABBBBBBBBBBBBCCCCCC
+</pre>
+Since pieces X and Y contain only one file, these are solved first. If we solve piece X first, and only one potential match is returned, then we can skip piece Y, since it won't tell us anything more about the file (unless you're running in robust mode).
+
+The also have a high probabilty to make step 2 much easier. It should be obvious why this is in Step 2.
+
+Step 2: Resolve the remaining pieces in least-number-of-combinations-first order.
+This step is essentially a password cracker. You can also think of it as solving a TSP -- The only way to get a correct answer is to try *EVERY* combination. 
+
+Unlike the TSP, this problem has no heuristic to tell you if you're getting close, or if a branch isn't promising. Thankfully, though, SHA1 allows us to incrementally update it so we can keep information from higher in the search tree to avoid *some* duplicate processing.
+
+The actual process looks something like this:</br>
+For each metafileFile in the piece, we cache the portions of all of the potential matching filesystem files that could appear in the piece. If we're going to read the same data over and over, there's no point in dealing with disk latency. This has the potential to run your computer out of memory, but this should never happen in practice, and if it did, there is no question that the metafile would be solvable in your lifetime.
+
+Once the potential matches are cached, we can begin searching the tree using a simple DFS. Each node in the tree points to a filesystem file. These nodes are generated based on their depth, where increasing depth by 1 means moving to the next metafileFile in the piece.
+
+EX (the tree are nodes of file contents):
+<pre>
+Metafile File: 11111111111111111222222222223333333333333333
+Tree         :
+              |AAAAAAAAAAAAAAAAA
+              |                |CCCCCCCCCCC
+              |                `DDDDDDDDDDD
+              |                           |EEEEEEEEEEEEEEEE
+              |                           |FFFFFFFFFFFFFFFF
+              |                           `GGGGGGGGGGGGGGGG
+              `BBBBBBBBBBBBBBBBB
+                               |CCCCCCCCCCC
+                               `DDDDDDDDDDD
+                                          |EEEEEEEEEEEEEEEE
+                                          |FFFFFFFFFFFFFFFF
+                                          `GGGGGGGGGGGGGGGG
+
+</pre>
+
+In short, we must search the cross-product of all possible files. The worst-case number of combinations can be calculated using n^m, where n is the number of potential files in a file, and m is the number of files in the piece. We obviously can't effect m, but we can do a few things to reduce m. I haven't seen any similar tool use these optimizations before, and this is why I built this tool in the first place.
+
+For example:
+<pre>
+Pieces: ---Piece 1---+++Piece 2+++
+Files : AAAABBBBBBBCCCCDDDDDDDEEEE
+Files A, B, and C have 10 potential matches, and files D and E have 2 potential matches
+
+Nr combinations:
+Piece 1: 10 * 10 * 10 = 1000
+Piece 2: 2 * 2 * 10 = 40
+
+The nieve solution -- solve the pieces in order:
+Solve piece 1: Try 1000 combinations
+New cost of piece 2: 2 * 2 * 1 = 4
+Solve piece 2: Try 4 combinations
+Total cost = 1004
+Combinations saved = 36
+
+My solution -- solve the pieces in least-complex first order:
+Solve piece 2: Try 40 combinations
+New cost of piece 1: 10 * 10 * 1 = 100
+Solve piece 1: Try 100 combinations
+Total cost = 140
+Combinations saved = 900
+</pre>
+
+At each recursive call (new node), we update the SHA1 sum with the contents of one of the filesystem files at this node. When there are no more files to add to the tree, we compare the SHA1 sums.
+
 
 Possible improvements (TODO)
 ============================
@@ -63,5 +158,6 @@ Possible improvements (TODO)
 - Automated unit testing
 - Better combination calculation function (I think this would be better modeled as a graph coloring problem)
 - Partial structure creation when we can't match a file
+- Learn how to make one of those Python auto-dep installers
 
 I fix things as I need to. At some point, I might have enough files where Python becomes too slow. Until then though, spideTor will remain a strictly Python-only project.
