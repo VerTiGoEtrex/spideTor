@@ -58,16 +58,16 @@ import Utils
 
 if os.name == "nt" or os.name == "ce":
     import ctypes
-    
+
     #Symlinks can't be made unless run with adminstrator privs
     if not ctypes.windll.shell32.IsUserAnAdmin():
         print "You must run this application with administrator privileges (try \"run as admin\" in the right-click menu"
         sys.exit(1)
-    
+
     csl = ctypes.windll.kernel32.CreateSymbolicLinkW
     csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
     csl.restype = ctypes.c_ubyte
-    
+
     def windowsSymlink(source, link_name):
         '''symlink(source, link_name)
         Creates a symbolic link pointing to source named link_name'''
@@ -76,11 +76,11 @@ if os.name == "nt" or os.name == "ce":
             flags = 1
         if csl(link_name, source, flags) == 0:
             raise ctypes.WinError()
-        
+
     mysymlink = windowsSymlink
 else:
     mysymlink = os.symlink
-    
+
 
 
 #####################
@@ -139,7 +139,7 @@ USAGE
         metafile = args.metafile
         sourcedir = args.sourcedir
         targetdir = args.targetdir
-        
+
         # Verify args and setup logger
         # verbose
         log.setLevel(max(2 - verbose, 1) * 10)
@@ -148,19 +148,19 @@ USAGE
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
         log.addHandler(ch)
-        
+
         if quick:
             log.info("Running in quick mode :)")
-        
+
         log.debug("Verifying that necessary directories and files exist")
-        
+
         # if batchdir is set, ensure it's a directory
         if batch != None:
             if not os.path.isdir(batch):
                 raise(Exception("Specified batch directory {} is not a directory".format(batch)))
             unmatcheddir = batch + os.sep + "_unmatched"
             matcheddir = batch + os.sep + "_matched"
-        
+
         # if metafile is set, ensure it exists and is readable
         if metafile != None:
             if os.path.exists(metafile):
@@ -170,32 +170,32 @@ USAGE
                 raise(Exception("Specified metafile {} does not exist".format(metafile)))
             unmatcheddir = os.path.dirname(metafile) + os.sep + "_unmatched"
             matcheddir = os.path.dirname(metafile) + os.sep + "_matched"
-        
+
         # ensure sourcedir is a directory, and is accessible
         if not os.path.isdir(sourcedir):
             raise(Exception("Specified source directory {} is not a directory".format(sourcedir)))
-        
+
         # ensure targetdir is a directory, or create if necessary
         if os.path.exists(targetdir):
             if not os.path.isdir(targetdir):
                 raise(Exception("Specified target directory {} conflicts with a file of the same name".format(targetdir)))
         else:
             os.makedirs(targetdir)
-            
+
         # make the unmatched directory
         if os.path.exists(unmatcheddir):
             if not os.path.isdir(unmatcheddir):
                 raise(Exception("unmatcheddir directory {} conflicts with a file of the same name".format(unmatcheddir)))
         else:
             os.makedirs(unmatcheddir)
-            
+
         # make the matched directory
         if os.path.exists(matcheddir):
             if not os.path.isdir(matcheddir):
                 raise(Exception("matcheddir directory {} conflicts with a file of the same name".format(matcheddir)))
         else:
             os.makedirs(matcheddir)
-        
+
         # Phase 1: Read the metafile(s)
         log.info("=====Phase 1: Read the metafiles=====")
         metafilelist = []
@@ -217,13 +217,13 @@ USAGE
         log.info("=====Phase 2: Populating source directory cache (this might take a while)=====")
         sourcedirectorycache = DirectoryCache(sourcedir)
         # === DEBUG CODE (for skipping directory cache generation) ===
-#         if not os.path.exists("dircache.pickle"):
-#             with open("dircache.pickle", 'w') as pickled:
-#                 sourcedirectorycache = DirectoryCache(sourcedir)
-#                 pickle.dump(sourcedirectorycache, pickled)
-#         else:
-#             with open("dircache.pickle", 'r') as pickled:
-#                 sourcedirectorycache = pickle.load(pickled)
+#        if not os.path.exists("dircache.pickle"):
+#            with open("dircache.pickle", 'w') as pickled:
+#                sourcedirectorycache = DirectoryCache(sourcedir)
+#                pickle.dump(sourcedirectorycache, pickled)
+#        else:
+#            with open("dircache.pickle", 'r') as pickled:
+#                sourcedirectorycache = pickle.load(pickled)
         # === /DEBUG CODE/ ===
 
         # Phase 3: Find matches and create symlinks
@@ -240,7 +240,7 @@ USAGE
             else:
                 unmatchedmetafiles.append(metafile)
                 shutil.move(metafile.getMetafilePath(), unmatcheddir)
-                
+
         # Phase 4: Print a report
         log.info("Finished!")
         log.info("Matched metafiles:")
@@ -250,7 +250,7 @@ USAGE
         log.info("Unmatched metafiles:")
         for metafile in unmatchedmetafiles:
             log.info("\tName: {}   ---   Path: {}".format(metafile.getName().encode("utf-8"), metafile.getMetafilePath().encode("utf-8")))
-             
+
         return 0
     except KeyboardInterrupt:
         ### handle keyboard interrupt ###
@@ -265,7 +265,7 @@ USAGE
         return 2
 
 def makeSymlinksFromFileMap(metafile, fileMap, rootdir):
-    
+
     for metafilefile, realfile in fileMap.iteritems():
         #Make sure directories exist to metafilefile
         if metafile.isSingleFileTorrent():
@@ -278,12 +278,12 @@ def makeSymlinksFromFileMap(metafile, fileMap, rootdir):
         if not os.path.exists(targetdir):
             log.debug("Path doesn't exist, creating: {}".format(targetdir.encode("utf-8")))
             os.makedirs(targetdir)
-            
+
         #Create symlink from targetfile to the real file
         if os.path.exists(targetfile):
             log.warn("File already exists in your symlink directory -- Not making link: {}".format(targetfile.encode("utf-8")))
             continue
-        
+
         sourcefile = Utils.windowsPathLengthLimitWorkaround(realfile.fullPath())
         log.debug("Source: {}".format(sourcefile.encode("utf-8")))
         log.debug("Target: {}".format(targetfile.encode("utf-8")))
@@ -293,7 +293,7 @@ def makeSymlinksFromFileMap(metafile, fileMap, rootdir):
             log.error("Error creating symlink: {}".format(e))
             return False
     return True
-    
+
 if __name__ == "__main__":
     if SHOWHELP:
         sys.argv.append("-h");

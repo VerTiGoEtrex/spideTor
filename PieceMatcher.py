@@ -22,7 +22,7 @@ class sha1BruteForcer:
         self.verifiedAnEntirePiece = verifiedAnEntirePiece
         self.matchingCombinations = []
         self.combinationsTried = 0
-        
+
     def bruteForce(self):
         '''
         Test all possible pairings of files in piece (maintaining ordering) to find matching combination(s)
@@ -36,25 +36,25 @@ class sha1BruteForcer:
         log.debug("\tPredicted number of combinations: {}".format(getNumberOfCombinations(self.potentialMatchesForMetafileFile, self.piece)))
         log.debug("\tActual number of combinations: {}".format(self.combinationsTried))
         log.debug("\tfound {} matching combinations".format(len(self.matchingCombinations)))
-        
+
         if self.piece.oneFileInPiece() and len(self.matchingCombinations) > 0:
             #We verified entire piece-worth of this file
             log.debug("\tverified piece-worth of file: {}".format(self.piece.getOneFileInPiece().getMetafileFile()))
             self.verifiedAnEntirePiece.add(self.piece.getOneFileInPiece().getMetafileFile())
-            
+
         return self.matchingCombinations
-        
+
     def _bruteForceHelper(self, sha1SoFar, pickedFiles, remainingFiles):
         '''
         DFS. Takes advantage of partially built SHA1 to cut down on computation time.
-        
+
         TODO: It might be valuable to multi-thread this or link it to C++
-        
+
         sha1SoFar(hashlib.sha1): sha1 builder that holds the sha1 of the selected files up until this point.
         pickedFiles(dict): files that are already selected for testing. MetafileFile => potl matching directoryCacheFile
         remainingFiles(deque): unexplored branch nodes (which we recurse on)
         '''
-        
+
         if len(remainingFiles) == 0:
             #Base case: No more files to try to match, just test the Sha1
             if sha1SoFar.digest() == self.piece.getHash():
@@ -64,21 +64,21 @@ class sha1BruteForcer:
             if self.combinationsTried % 10000 == 0:
                 log.info("\tTried {} combinations so far".format(self.combinationsTried))
             return
-        
+
         #Get the next file in the branch
         ourFile = remainingFiles.pop()
-        
+
         #Test each of the potential matches for this file
         for directoryCacheFile in self.potentialMatchesForMetafileFile[ourFile.getMetafileFile()] - set(pickedFiles.itervalues()):
             pickedFiles[ourFile] = directoryCacheFile
             ourSha1 = sha1SoFar.copy()
-            ourSha1.update(self.fileCache.getCachedData(directoryCacheFile, ourFile.getStartOffset()))
+            ourSha1.update(self.fileCache.getCachedData(directoryCacheFile, ourFile.getStartOffset(), ourFile.getReadLength()))
             self._bruteForceHelper(ourSha1, pickedFiles, remainingFiles)
-        
+
         #Restore this file back onto the "remainingFiles" branch
         del pickedFiles[ourFile]
         remainingFiles.append(ourFile)
-        
+
 
 def getNumberOfCombinations(potentialMatchesForMetafileFile, piece):
     # Figure out worst case number of combinations we'll need to check
@@ -128,28 +128,28 @@ def matchPieceToFiles(quick, piece, potentialMatchesForMetafileFile, verifiedAnE
         # Skip this file if we're in quick mode and the file has already been matched
         log.debug("piece was skippable")
         return True
-    
+
     # Cache all of the possibly needed file parts
     fileCache = FileCache(piece, potentialMatchesForMetafileFile)
-    
+
     # Match the files in this piece as best we can
     #TODO: add support for merkle hashes/trees
     if len(piece.getFileWithOffsetsInPiece()) > 1:
         log.debug("Trying to match a file with more than one piece using brute force")
     matcher = sha1BruteForcer(piece, fileCache, potentialMatchesForMetafileFile, verifiedAnEntirePiece)
     matchingCombinations = matcher.bruteForce()
-    
+
     if len(matchingCombinations) > 1:
         log.warn("FOUND > 1 MATCHING COMBINATIONS! (duplicate files?)")
         log.warn(matchingCombinations)
-    
+
     if len(matchingCombinations) == 0:
         #TODO: create partial structures?
-        log.debug("No combinations found for files:")
+        log.warn("No combinations found for files:")
         for fileWithOffset in piece.getFileWithOffsetsInPiece():
-            log.debug(fileWithOffset.getMetafileFile())
+            log.warn(fileWithOffset.getMetafileFile())
         return False
-    
+
     #Update the potentialMatchesForMetafileFile map
     for fileWithOffset in piece.getFileWithOffsetsInPiece():
         metafileFile = fileWithOffset.getMetafileFile()
@@ -157,28 +157,28 @@ def matchPieceToFiles(quick, piece, potentialMatchesForMetafileFile, verifiedAnE
     for matchingCombination in matchingCombinations:
         for metafileFile, directoryCacheFile in matchingCombination.iteritems():
             potentialMatchesForMetafileFile[metafileFile.getMetafileFile()].add(directoryCacheFile)
-            
+
     return True
 
 #from profilehooks import profile
 #@profile(entries = 800)
 def matchAllFilesInMetaFile(metafile, directorycache, quick):
     metafileFiles = metafile.getMetafileFiles()
-    
+
     # We can narrow down the search space by only considering DirectoryCacheFiles that are the same size
     potentialMatchesForMetafileFile = findPotentialMatches(metafileFiles, directorycache)
     if potentialMatchesForMetafileFile == False:
         log.warn("Skipping metafile because we couldn't find match for a file in metafile: {}".format(metafile))
         return
-    
+
     log.debug("Mapping metafile pieces to metafile files")
     log.debug("Match by hash:")
-    
+
     piecesToVerify = metafile.getPieces()
     verifiedAnEntirePiece = set()
-    
+
     log.debug("Resolving pieces in least-complex first order")
-    
+
     # First we need a min-heap of the remaining pieces (compared by how many combinations they have)
     pieceHeap = heapdict() # TODO: This is nlog(n) construction, because there's no heapify constructor
     for piece in piecesToVerify:
@@ -189,19 +189,19 @@ def matchAllFilesInMetaFile(metafile, directorycache, quick):
         else:
             #This is a more complicated piece. Solve it later.
             pieceHeap[piece] = getNumberOfCombinations(potentialMatchesForMetafileFile, piece)
-    
-    
-    # TODO: This handles cross-piece files very poorly. For pieces that contain an entire file in them and 
+
+
+    # TODO: This handles cross-piece files very poorly. For pieces that contain an entire file in them and
     # have multiple matches with a cross-piece file, if that cross-piece file has matches eliminated later,
     # we might select files for this piece that are wrong.
-    
-    # POSSIBLE SOLUTION: If a piece that contains multiple files in it has multuple matching combinations, 
-    # insert it into a "re-check" queue that will try to match it again after more pieces has been 
+
+    # POSSIBLE SOLUTION: If a piece that contains multiple files in it has multuple matching combinations,
+    # insert it into a "re-check" queue that will try to match it again after more pieces has been
     # 100% matched to a single combination of files
-    
-    # REASON THIS ISN'T FIXED: It's VERY unlikely. We'd have to have several hash collisions, which I don't 
+
+    # REASON THIS ISN'T FIXED: It's VERY unlikely. We'd have to have several hash collisions, which I don't
     # claim to resolve anyway
-    
+
     try:
         pieceTuple = pieceHeap.popitem()
     except IndexError, e:
@@ -215,7 +215,7 @@ def matchAllFilesInMetaFile(metafile, directorycache, quick):
         if not matchPieceToFiles(quick, piece, potentialMatchesForMetafileFile, verifiedAnEntirePiece):
             log.warn("Necessary pieces could not be verified. Skipping this metafile.")
             return
-                
+
         #Update the neighbors in the heap
         if piece.getNextPiece() != None and piece.getNextPiece() in pieceHeap:
             updatedCost = getNumberOfCombinations(potentialMatchesForMetafileFile, piece.getNextPiece())
@@ -227,12 +227,12 @@ def matchAllFilesInMetaFile(metafile, directorycache, quick):
             if pieceHeap[piece.getPrevPiece()] != updatedCost:
                 log.debug("Updated cost of piece {} FROM {} TO {}".format(piece.getNextPiece().getPieceNumber(), pieceHeap[piece.getPrevPiece()], updatedCost))
                 pieceHeap[piece.getPrevPiece()] = updatedCost
-        
+
         try:
             pieceTuple = pieceHeap.popitem()
         except IndexError, e:
             pieceTuple = None
-     
+
     #Make sure that each file has only has one match (both directions)
     metafileFilesWithActualMatches = {}
     matchedFileSystem = set()

@@ -15,12 +15,11 @@ class FileCache:
         for metafileFileWithOffset in piece.getFileWithOffsetsInPiece():
             for directoryCacheFile in potentialMatchesForMetafileFile[metafileFileWithOffset.getMetafileFile()]:
                 self.addDirectoryCacheFile(directoryCacheFile, metafileFileWithOffset.getStartOffset(), metafileFileWithOffset.getReadLength())
-        
+
     def addDirectoryCacheFile(self, realfile, startOffset, readLength):
         with open(realfile.fullPath(), 'rb') as openedFile:
             openedFile.seek(startOffset)
-            self.cache[(realfile, startOffset)] = openedFile.read(readLength)
-            
-    def getCachedData(self, realfile, startOffset):
-        return self.cache[(realfile, startOffset)]
-        
+            self.cache[(realfile, startOffset, readLength)] = openedFile.read(readLength)
+
+    def getCachedData(self, realfile, startOffset, readLength):
+        return self.cache[(realfile, startOffset, readLength)]
