@@ -40,7 +40,7 @@ import pickle
 __all__ = []
 __version__ = 0.1
 __date__ = '2014-07-22'
-__updated__ = '2014-08-10'
+__updated__ = '2014-08-15'
 log = logging.getLogger()
 pp = pprint.PrettyPrinter(indent = 1, width = 80)
 
@@ -157,7 +157,7 @@ USAGE
         # if batchdir is set, ensure it's a directory
         if batch != None:
             if not os.path.isdir(batch):
-                raise(Exception("Specified batch directory {} is not a directory".format(batch)))
+                raise Exception("Specified batch directory {} is not a directory".format(batch))
             unmatcheddir = batch + os.sep + "_unmatched"
             matcheddir = batch + os.sep + "_matched"
 
@@ -165,34 +165,34 @@ USAGE
         if metafile != None:
             if os.path.exists(metafile):
                 if not os.access(metafile, os.R_OK):
-                    raise(Exception("Specified metafile {} is not accessible (check permissions?)".format(metafile)))
+                    raise Exception("Specified metafile {} is not accessible (check permissions?)".format(metafile))
             else:
-                raise(Exception("Specified metafile {} does not exist".format(metafile)))
+                raise Exception("Specified metafile {} does not exist".format(metafile))
             unmatcheddir = os.path.dirname(metafile) + os.sep + "_unmatched"
             matcheddir = os.path.dirname(metafile) + os.sep + "_matched"
 
         # ensure sourcedir is a directory, and is accessible
         if not os.path.isdir(sourcedir):
-            raise(Exception("Specified source directory {} is not a directory".format(sourcedir)))
+            raise Exception("Specified source directory {} is not a directory".format(sourcedir))
 
         # ensure targetdir is a directory, or create if necessary
         if os.path.exists(targetdir):
             if not os.path.isdir(targetdir):
-                raise(Exception("Specified target directory {} conflicts with a file of the same name".format(targetdir)))
+                raise Exception("Specified target directory {} conflicts with a file of the same name".format(targetdir))
         else:
             os.makedirs(targetdir)
 
         # make the unmatched directory
         if os.path.exists(unmatcheddir):
             if not os.path.isdir(unmatcheddir):
-                raise(Exception("unmatcheddir directory {} conflicts with a file of the same name".format(unmatcheddir)))
+                raise Exception("unmatcheddir directory {} conflicts with a file of the same name".format(unmatcheddir))
         else:
             os.makedirs(unmatcheddir)
 
         # make the matched directory
         if os.path.exists(matcheddir):
             if not os.path.isdir(matcheddir):
-                raise(Exception("matcheddir directory {} conflicts with a file of the same name".format(matcheddir)))
+                raise Exception("matcheddir directory {} conflicts with a file of the same name".format(matcheddir))
         else:
             os.makedirs(matcheddir)
 
