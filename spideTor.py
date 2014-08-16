@@ -89,7 +89,7 @@ else:
 
 PROFILE = 0
 SHOWHELP = 0
-DEBUG = 1
+DEBUG = 0
 
 def main(argv=None): # IGNORE:C0111
     '''Command line options.'''
@@ -255,10 +255,10 @@ USAGE
     except KeyboardInterrupt:
         ### handle keyboard interrupt ###
         return 0
-#    except Exception, e:
-#        if DEBUG:
-#            raise(e)
-#        log.critical(e)
+    except Exception, e:
+        if DEBUG:
+            raise(e)
+        log.critical(e)
         indent = len(program_name) * " "
         sys.stderr.write(program_name + ": unrecoverable error\n")
         sys.stderr.write(indent + "  for help use -h/--help")
