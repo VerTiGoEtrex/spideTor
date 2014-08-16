@@ -6,9 +6,9 @@ Created on Aug 3, 2014
 
 import logging
 from _collections import defaultdict
-from FileCache import FileCache
 import hashlib
 from heapdict import heapdict
+from FileCache import FileCache
 log = logging.getLogger(__name__)
 
 class sha1BruteForcer:

@@ -27,8 +27,8 @@ class DirectoryCache:
         '''
         self.cacheinfo = defaultdict(set)
         self.walkDirs(directorypath)
-    
-    def walkDirs(self, directorypath): 
+
+    def walkDirs(self, directorypath):
         for root, dirs, files in os.walk(unicode(directorypath), onerror=walkfail):
             # Make path absolute, and take care of win32 API behavior
             root = Utils.windowsPathLengthLimitWorkaround(os.path.abspath(root))
@@ -39,10 +39,10 @@ class DirectoryCache:
                     self.cacheinfo[size].add(DirectoryCacheFile(f, filepath, size))
                 else:
                     log.warn("os.walk-ed file isn't accessible/doesn't exist: rootpath: {}".format(filepath.encode("utf-8")))
-    
+
     def getFilesWithSize(self, size):
         return set(self.cacheinfo[size])
-    
+
 class DirectoryCacheFile:
     '''
     Contains information about a file on your filesystem (size, name and path)
@@ -51,18 +51,18 @@ class DirectoryCacheFile:
         self.name = name
         self.path = path
         self.size = size
-        
+
     def __unicode__(self):
         return self.fullPath()
-        
+
     def __str__(self):
         return self.__unicode__().encode("utf-8")
-    
+
     def __repr__(self):
         return "DCFI|" + self.__str__()
-        
+
     def fullPath(self):
         return self.path
-    
+
     def getSize(self):
         return self.size;

@@ -30,8 +30,16 @@ from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 import shutil
 import pprint
-from PieceMatcher import matchAllFilesInMetaFile
 import pickle
+
+
+###################
+# LOCAL LIBRARIES #
+###################
+from Metafile import Metafile
+from DirectoryCache import DirectoryCache
+import Utils
+from PieceMatcher import matchAllFilesInMetaFile
 
 ###########
 # GLOBALS #
@@ -43,14 +51,6 @@ __date__ = '2014-07-22'
 __updated__ = '2014-08-15'
 log = logging.getLogger()
 pp = pprint.PrettyPrinter(indent = 1, width = 80)
-
-#################
-# LOCAL MODULES #
-#################
-
-from Metafile import Metafile
-from DirectoryCache import DirectoryCache
-import Utils
 
 #####################################
 # PATCH SYMLINK ON WINDOWS MACHINES #
