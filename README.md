@@ -156,7 +156,7 @@ Possible improvements (TODO)
 - Run the DFS search with SHA1 on a GPU if available (I'd probably need to write this as an extension in C++)
 - Look into Cython to compile as C
 - Automated unit testing
-- Better combination calculation function (I think this would be better modeled as a graph coloring problem)
+- Better combination calculation function (I worked out the formula, but haven't implemented it yet.)
 - Partial structure creation when we can't match a file
 - Learn how to make one of those Python auto-dep installers
 
