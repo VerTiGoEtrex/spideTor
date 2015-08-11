@@ -160,6 +160,7 @@ USAGE
                 raise Exception("Specified batch directory {} is not a directory".format(batch))
             unmatcheddir = batch + os.sep + "_unmatched"
             matcheddir = batch + os.sep + "_matched"
+            reportfile = batch + os.sep + "_report.txt"
 
         # if metafile is set, ensure it exists and is readable
         if metafile != None:
@@ -170,6 +171,7 @@ USAGE
                 raise Exception("Specified metafile {} does not exist".format(metafile))
             unmatcheddir = os.path.dirname(metafile) + os.sep + "_unmatched"
             matcheddir = os.path.dirname(metafile) + os.sep + "_matched"
+            reportfile = os.path.dirname(metafile) + os.sep + "_report.txt"
 
         # ensure sourcedir is a directory, and is accessible
         if not os.path.isdir(sourcedir):
@@ -235,6 +237,8 @@ USAGE
             matchedFilesMap = matchAllFilesInMetaFile(metafile, sourcedirectorycache, quick)
             if matchedFilesMap != None and makeSymlinksFromFileMap(metafile, matchedFilesMap, targetdir) == True:
                 #Entire metafile was matched
+                for metafilefile, realfile in matchedFilesMap.iteritems():
+                    realfile.setIsLinked(True)
                 matchedmetafiles.append(metafile)
                 shutil.move(metafile.getMetafilePath(), matcheddir)
             else:
@@ -250,6 +254,13 @@ USAGE
         log.info("Unmatched metafiles:")
         for metafile in unmatchedmetafiles:
             log.info("\tName: {}   ---   Path: {}".format(metafile.getName().encode("utf-8"), metafile.getMetafilePath().encode("utf-8")))
+			
+		# Phase 5: Write unmatched file list to report file
+        log.info("")
+        log.info("")
+        log.info("Writing report to reportfile {}".format(reportfile))
+        with open(reportfile, 'w') as rfile:
+            sourcedirectorycache.writeUnmatchedFilesReport(rfile)
 
         return 0
     except KeyboardInterrupt:

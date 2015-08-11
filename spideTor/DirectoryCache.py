@@ -43,6 +43,17 @@ class DirectoryCache:
     def getFilesWithSize(self, size):
         return set(self.cacheinfo[size])
 
+    def writeUnmatchedFilesReport(self, reportfile):
+        unmatchedFiles = list()
+        for dcfs in self.cacheinfo.itervalues():
+            for dcf in dcfs:
+                if not dcf.isLinked:
+                    unmatchedFiles.append(dcf)
+        unmatchedFiles.sort(key=lambda dcf: dcf.path)
+        for dcf in unmatchedFiles:
+            reportfile.write(dcf.path.encode("utf-8") + "\n")
+            
+
 class DirectoryCacheFile:
     '''
     Contains information about a file on your filesystem (size, name and path)
@@ -51,6 +62,7 @@ class DirectoryCacheFile:
         self.name = name
         self.path = path
         self.size = size
+        self.isLinked = False
 
     def __unicode__(self):
         return self.fullPath()
@@ -66,3 +78,6 @@ class DirectoryCacheFile:
 
     def getSize(self):
         return self.size;
+    
+    def setIsLinked(self, isLinked):
+        self.isLinked = isLinked
